@@ -23,12 +23,12 @@
 
 #define BUFFER_SIZE 4096
 
-#ifdef BIGENDIAN
+#ifdef SYSTEM_IS_BIGENDIAN
 #define COPY_2_BYTES(src,soffset,dest,doffset)  swab(((char*) (src)) + (soffset), ((char*) (dest)) + (doffset), 2)
 void swap_32(const void *from, void *to)
 {
   char *i, *j;
-  for (i = (char*) to, j = (char*) from + 3; i < (to + 4); i++, j--)
+  for (i = (char*) to, j = (char*) from + 3; i < ((char*)to + 4); i++, j--)
     *j = *i;
 }
 #define COPY_4_BYTES(src,soffset,dest,doffset)  swap_32(((char*) (src)) + (soffset), ((char*) (dest)) + (doffset))
