@@ -1,0 +1,36 @@
+.TH ACQSPECT 1 acqspect\-VERSION
+.SH NAME
+acqspect \- acquire spectra from an Ocean Optics USB spectrometer
+.SH SYNOPSIS
+.B acqspect
+.RB [-t int]
+.RB [-n int]
+.SH DESCRIPTION
+acqspect is a very simple program that acquires a spectrum from an
+Ocean Optics USB spectrometer, and dumps the two-column data table to
+standard output. The first column specifies the wavelength in nm, and
+the second column specifies the intensity in arbitrary units.
+.SH OPTIONS
+.TP
+.B \-t int
+Set the integration time to int, in microseconds. Default is 100000.
+.TP
+.B \-n int
+Acquire int number of spectra. Each spectrum will be separated from
+the previous by two blank lines. Default is 1. In principle, acquiring
+multiple spectra could be accomplished using the shell's for loop
+facility. However, the benefit of using this switch is that the
+calibration coefficents are only downloaded once and the spectrometer
+is only powered on once, before acquisition, and powered off again
+after all spectra have been acquired.
+.TP
+.B \-v
+Show version information and exit.
+.TP
+.B \-h
+Show help message and exit.
+.SH CAVEATS
+At the moment, only the USB2000+ spectrometer is supported. Non-linear
+correction is not yet applied.
+.SH AUTHOR
+Written by Sumant S.R. Oemrawsingh.

@@ -1,0 +1,52 @@
+acqspect - Acquire a spectrum from an Ocean Optics USB spectrometer
+===================================================================
+acqspect is a command-line program that acquires a spectrum from an
+Ocean Optics USB spectrometer and dumps the data in ascii form.
+Currently, only the USB2000+ spectrometer is supported, but adding
+support for others, such as the USB4000, should be relatively easy.
+
+Requirements
+------------
+libusb-0.1
+
+Installation
+------------
+Edit config.mk to match your local setup. acqspect is installed into
+the /usr/local namespace by default, and is built for little-endian
+systems.
+
+Afterwards enter the following command to build and install acqspect
+(if necessary as root):
+
+    make clean install
+
+Running acqspect
+----------------
+Just run acqspect to acquire a spectrum with an integration time of
+100ms (by default). The spectrum is printed on standard output in
+two-column format. The first column is the wavelength, and the second
+column is the intensity. When acquiring multiple spectra, the spectra
+are separated by two blank lines.
+
+Options:
+-t NUM  Set the integration time in microseconds (default 100000)
+-n NUM  Set the number of acquisitions (default 1)
+
+While it is possible to run acqspect in a loop as provided by your
+shell, the -n option was included on purpose. Each call to acqspect
+locates the device, downloads calibration parameters, powers up the
+spectrometer and, after acquisition, powers it down again. Using an
+external loop would repeat all these steps, whereas use of the -n
+option only loops the acquisition.
+
+Operating systems
+-----------------    
+This has been tested to work on linux, and should work on windows
+using libusb-win32, but is untested. Support for bigendian systems
+is included, but also untested.
+
+Supported spectrometers
+-----------------------
+USB2000+
+
+© 2011 S.S.R. Oemrawsingh
