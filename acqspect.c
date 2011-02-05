@@ -8,7 +8,12 @@
 
 #define OCEAN_OPTICS  0x2457
 #define USB2000PLUS   0x101E
-#define USB4000       0x1022
+
+/* Docs say that the first 18 pixels (0--17) are optically black, and the following 2 (18, 19) are unusable.
+   However, it seems more that the first 2 (0,1) are unusable, giving extreme values.
+*/
+#define USB2000PLUS_BLACK_PIXELS 18
+#define USB2000PLUS_BLACK_PIXELS_OFFSET 2
 
 #define EP1Out 0x01
 #define EP2In  0x82
@@ -21,7 +26,7 @@
 
 #define TIMEOUT 100
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 4097
 
 #ifdef SYSTEM_IS_BIGENDIAN
 #define COPY_2_BYTES(src,soffset,dest,doffset)  swab(((char*) (src)) + (soffset), ((char*) (dest)) + (doffset), 2)
@@ -245,11 +250,12 @@ int main(int argc, char *argv[])
   struct usb_device *device;
   char buffer[BUFFER_SIZE];
   int i, result;
+  char dark_correction = 0;
 
   uint16_t number_of_pixels, pixel_value;
   uint32_t integration_time = 100000;
   uint32_t spectrum, number_of_spectra = 1;
-  double scaling;
+  double scaling, dark = 0.0;
 
   /* This is a global in order to use the atexit facility */
   handle = NULL;
@@ -278,6 +284,9 @@ int main(int argc, char *argv[])
 	return 1;
       }
       break;
+    case 'd':
+      dark_correction = 1;
+      break;
     case 'v':
       fprintf(stderr, "acqspect-"VERSION", © 2011, Sumant S.R. Oemrawsingh, see LICENSE for details\n");
       return 0;
@@ -286,8 +295,9 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Usage: %s [options]\n", argv[0]);
       fprintf(stderr, "Acquire a spectrum from an Ocean Optics USB2000+ spectrometer.\n\n");
       fprintf(stderr, "Options:\n");
-      fprintf(stderr, "-t NUM  Set integration time in microseconds (default: 100000).\n");
+      fprintf(stderr, "-d      Enable electric dark correction (default: disabled).\n");
       fprintf(stderr, "-n NUM  Number of acquisitions (default: 1).\n");
+      fprintf(stderr, "-t NUM  Set integration time in microseconds (default: 100000).\n");
       fprintf(stderr, "-v      Print version information and exit.\n");
       fprintf(stderr, "-h      Print this help message and exit.\n");
       return 0;
@@ -374,18 +384,41 @@ int main(int argc, char *argv[])
 			     TIMEOUT + integration_time/1000);
     } while (result < 2 * number_of_pixels + 1 ||
 	     buffer[2 * number_of_pixels] != 0x69);
-    
-    /* Print spectrum */
-    for (i = 0; i < number_of_pixels; i++) {
-      COPY_2_BYTES(buffer, 2*i, &pixel_value, 0);
-      printf("%f %f\n",
-	     get_spectrometer_wavelength(i),
-	     pixel_value * scaling);
-	     /*	     spectrometer_correct_intensity(pixel_value * scaling));*/
+
+    /* Set dark correction */
+    if (dark_correction == 1) {
+      dark = 0.0;
+      for (i = USB2000PLUS_BLACK_PIXELS_OFFSET;
+	   i < USB2000PLUS_BLACK_PIXELS + USB2000PLUS_BLACK_PIXELS_OFFSET; i++) {
+	COPY_2_BYTES(buffer, 2*i, &pixel_value, 0);
+	dark += pixel_value * scaling;
+      }
+      dark /= (double) USB2000PLUS_BLACK_PIXELS;
+      
+      /* Print */
+      for (i = 0; i < number_of_pixels; i++) {
+	if (i < USB2000PLUS_BLACK_PIXELS_OFFSET)
+	  COPY_2_BYTES(buffer, 2*USB2000PLUS_BLACK_PIXELS_OFFSET, &pixel_value, 0);
+	else
+	  COPY_2_BYTES(buffer, 2*i, &pixel_value, 0);
+	printf("%f %f\n",
+	       get_spectrometer_wavelength(i),
+	       pixel_value * scaling - dark);
+      }
     }
+    else
+      for (i = 0; i < number_of_pixels; i++) {
+	if (i < USB2000PLUS_BLACK_PIXELS_OFFSET)
+	  COPY_2_BYTES(buffer, 2*USB2000PLUS_BLACK_PIXELS_OFFSET, &pixel_value, 0);
+	else
+	  COPY_2_BYTES(buffer, 2*i, &pixel_value, 0);
+	printf("%f %f\n",
+	       get_spectrometer_wavelength(i),
+	       pixel_value * scaling);
+      }
     printf("\n\n");
   }
-
+  
   /* End of line: let atexit-registered functions handle it all. */
   
   return 0;
